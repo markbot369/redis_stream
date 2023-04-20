@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "redis-stream"
+version = "0.1.0"
+description = ""
+authors = ["jcf44 <johancobo236@gmail.com>"]
+readme = "README.md"
+packages = [{include = "redis_stream"}]
+
+[tool.poetry.dependencies]
+python = "^3.10"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
