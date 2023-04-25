@@ -24,7 +24,7 @@ Redis streams also support consumer groups, which allow multiple consumers to re
 
 ## Redis Stream Client Example
 
-For the creation of the example project we are going to use poetry, but you can follow the example code with any tool capable of creating a Python virtual environment.
+For the creation of the example project we are going to use [Poetry](https://python-poetry.org/), but you can follow the example code with any tool capable of creating a Python virtual environment.
 
 Also you can follow the code explanation cloning the code in the [Github repository](https://github.com/markbot369/redis_stream)
 
@@ -103,48 +103,6 @@ block: The maximum amount of time to wait for new messages to arrive, in millise
 
 The method returns a list of tuples, where each tuple contains the stream key and a list of messages. Each message is represented as a tuple containing the message ID and a dictionary of message data.
 
-To call the above code in a CLI application, you can create an instance of the `RedisStreamReader` class with the appropriate parameters(we provide some example), and then use its methods to read and acknowledge messages from the stream. For example:
-
-```python
-import argparse
-from redis_stream.simple_redisclient import RedisStreamReader
-
-
-def parse_args():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('stream_key', help='Redis stream key to read from')
-    parser.add_argument('group_name', help='Consumer group name')
-    parser.add_argument('consumer_name', help='Consumer name')
-    parser.add_argument('--server', default='localhost', help='Redis server host')
-    parser.add_argument('--port', default=6379, type=int, help='Redis server port')
-    return parser.parse_args()
-
-
-def main():
-    args = parse_args()
-    reader = RedisStreamReader(args.stream_key, args.group_name, args.consumer_name,
-                                server=args.server, port=args.port)
-    if reader.is_connected():
-        for message in reader.read():
-            # process the message
-            reader.ack(message['id'])
-    else:
-        print('Error: Redis client is not connected')
-
-
-if __name__ == '__main__':
-    main()
-```
-
-In this example, we define a `main()` function that parses the command line arguments using the argparse module, creates an instance of `RedisStreamReader`, and then loops through the messages returned by the `read()` method, processing each message and acknowledging it using the `ack()` method. If the Redis client is not connected, an error message is printed.
-
-To run the CLI application, you can execute the Python script with the appropriate command line arguments. For example:
-
-TODO: Change the code below to a real project script name
-```bash
-python myapp.py mystream mygroup myconsumer --server redis.mycompany.com --port 6379
-```
-
 ## Create a Redis client and run a Redis server for testing our code
 
 Now we are going to create a more real Redis stream consumer and test it with a Redis server running into a Docker container.
@@ -203,6 +161,7 @@ The `publish_message` method is used to publish a message to a Redis stream iden
 The `consume_messages` method is used to consume messages from a Redis stream. This method takes the `consumer_group`, `consumer_name`, `last_id`, and `count` parameters, which are used to identify the group and consumer that will consume the messages. The `xreadgroup` command is used to read messages from the stream based on these parameters. The messages are returned by the method.
 The `ack` method is used to acknowledge a message that has been consumed by a consumer in a consumer group. The `xack` command is used to acknowledge the message, and the method takes the `message_id` parameter, which is used to identify the message.
 The `nack` method is used to negative acknowledge a message that has been consumed by a consumer in a consumer group. The `xack` command is used with the force=False parameter to negative acknowledge the message, and the method takes the `message_id` parameter, which is used to identify the message.
+The code file in the [repository](https://github.com/markbot369/redis_stream) project is named `redis_client.py`.
 
 ## Create some tests to see how this Redis service works
 
@@ -230,6 +189,12 @@ You can now connect to the Redis server running in the Docker container from you
 docker run -it --network some-network --rm redis redis-cli -h redis-server
 ```
 
+>Note: If you want to stop and remove the container, you can run the following command:
+
+```bash
+docker stop my-redis && docker rm my-redis
+```
+
 ## Testing the client code
 
 These tests cover the basic functionality of the Redis client, ensuring that messages can be published to the stream and consumed by a consumer group.
@@ -237,7 +202,7 @@ The following provided code is a set of unit tests written using the pytest test
 
 ```python
 import pytest
-from redis_stream.simple_redisclient import RedisClient
+from redis_stream.redis_client import RedisClient
 
 
 stream_name = 'mystream'
@@ -301,5 +266,85 @@ Both tests use the assert statement to check that the expected results are retur
 The test then is invocated with the calling the PyTest command bellow:
 
 ```bash
-pytest -v tests/test_redis_stream_client.py
+pytest
 ```
+
+The output in the console must be similar to this:
+
+```bash
+❯ pytest
+==================================================================== test session starts =====================================================================
+platform linux -- Python 3.10.6, pytest-7.3.1, pluggy-1.0.0
+rootdir: /home/jcobo/projects/learningbot/python_prjs/redis_stream/redis_stream
+collected 2 items                                                                                                                                            
+
+tests/test_redis_stream_client.py ..                                                                                                                   [100%]
+
+===================================================================== 2 passed in 0.09s ======================================================================
+
+```
+
+Pytest will find the defined tests into the "tests" folder into the "Poetry" project structure and run all of them.
+
+## Create a little server to run our Redis stream consumer
+
+To call the above code in a CLI application, you can create an instance of the `RedisStreamReader` class with the appropriate parameters(we provide some example), and then use its methods to read and acknowledge messages from the stream. For example:
+
+```python
+import argparse
+from redis_stream.simple_redisclient import RedisStreamReader
+
+
+def parse_args():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('stream_key', help='Redis stream key to read from')
+    parser.add_argument('group_name', help='Consumer group name')
+    parser.add_argument('consumer_name', help='Consumer name')
+    parser.add_argument('--server', default='localhost', help='Redis server host')
+    parser.add_argument('--port', default=6379, type=int, help='Redis server port')
+    return parser.parse_args()
+
+
+def main():
+    args = parse_args()
+    reader = RedisStreamReader(args.stream_key, args.group_name, args.consumer_name,
+                                server=args.server, port=args.port)
+    if reader.is_connected():
+        for message in reader.read():
+            # process the message
+            reader.ack(message['id'])
+    else:
+        print('Error: Redis client is not connected')
+
+
+if __name__ == '__main__':
+    main()
+```
+
+In this example, we define a `main()` function that parses the command line arguments using the argparse module, creates an instance of `RedisStreamReader`, and then loops through the messages returned by the `read()` method, processing each message and acknowledging it using the `ack()` method. If the Redis client is not connected, an error message is printed.
+
+To run the CLI application, you can execute the Python script with the appropriate command line arguments. For example:
+
+```bash
+python redis_stream/main.py
+```
+
+Now you can insert some messages to the stream and see how the messages are delivered to the consumer. For examplpe we can send some messages with the Redis client ...
+
+```bash
+XADD mystream * msg hello
+```
+
+.. and the result will be displayed into the console:
+
+```bash
+Recived message: [b'mystream', [(b'1681988838361-0', {b'msg': b'hello1'})]]
+```
+
+## Conclusion
+
+We have explored the benefits of using a Python client to connect to a Redis stream and consume the incoming messages. Through testing and development, we were able to create a main script that serves as an exemplary server for this functionality.
+
+By leveraging the power of Redis streams and Python, we have created a reliable and efficient solution for managing incoming data. This approach allows for real-time processing and analysis of data streams, making it ideal for use cases such as data analytics, IoT applications, and real-time communication.
+
+The combination of Redis streams and Python proves to be a powerful tool for managing data streams and developing effective solutions for modern data-driven applications. With this knowledge, developers can confidently integrate this technology into their own projects and leverage the full potential of real-time data management.
